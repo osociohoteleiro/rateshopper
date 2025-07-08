@@ -86,7 +86,9 @@ const HotelManagement = ({ onRefresh }) => {
         setEditingHotel(null)
         setFormData({ nome: '', url_booking: '', localizacao: '' })
         fetchHotels()
-        onRefresh()
+        if (onRefresh && typeof onRefresh === 'function') {
+          onRefresh()
+        }
       } else {
         alert(data.error || 'Erro ao salvar hotel')
       }
@@ -120,7 +122,9 @@ const HotelManagement = ({ onRefresh }) => {
         const data = await response.json()
         if (data.success) {
           fetchHotels()
-          onRefresh()
+          if (onRefresh && typeof onRefresh === 'function') {
+            onRefresh()
+          }
         } else {
           alert(data.error || 'Erro ao excluir hotel')
         }
@@ -167,7 +171,9 @@ const HotelManagement = ({ onRefresh }) => {
           setIsConcorrenteDialogOpen(false)
           setSelectedConcorrente('')
           fetchHotels()
-          onRefresh()
+          if (onRefresh && typeof onRefresh === 'function') {
+            onRefresh()
+          }
         } else {
           alert(data.error || 'Erro ao adicionar concorrente')
         }
@@ -195,7 +201,9 @@ const HotelManagement = ({ onRefresh }) => {
         const data = await response.json()
         if (data.success) {
           fetchHotels()
-          onRefresh()
+          if (onRefresh && typeof onRefresh === 'function') {
+            onRefresh()
+          }
         } else {
           alert(data.error || 'Erro ao remover concorrente')
         }
@@ -440,19 +448,19 @@ const HotelManagement = ({ onRefresh }) => {
                         <h4 className="font-medium text-purple-600">Concorrentes</h4>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {hotel.concorrentes.map((concorrente) => (
+                        {hotel.concorrentes.map((concorrente, index) => (
                           <div 
-                            key={concorrente.id} 
+                            key={index} 
                             className="flex items-center justify-between p-2 bg-white rounded border border-gray-200"
                           >
                             <div className="flex items-center space-x-2">
                               <Hotel className="w-4 h-4 text-gray-600" />
-                              <span className="text-sm">{concorrente.nome}</span>
+                              <span className="text-sm">{concorrente}</span>
                             </div>
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleRemoveConcorrente(hotel, concorrente.id)}
+                              onClick={() => handleRemoveConcorrente(hotel, concorrente)}
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                             >
                               <UserMinus className="w-4 h-4" />

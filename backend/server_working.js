@@ -53,7 +53,10 @@ const tarifas = [
 
 // Rotas da API
 app.get('/api/hotels', (req, res) => {
-  res.json(hoteis);
+  res.json({
+    success: true,
+    data: hoteis
+  });
 });
 
 app.post('/api/hotels', (req, res) => {
@@ -67,7 +70,10 @@ app.post('/api/hotels', (req, res) => {
     concorrentes: []
   };
   hoteis.push(novoHotel);
-  res.json(novoHotel);
+  res.json({
+    success: true,
+    data: novoHotel
+  });
 });
 
 app.delete('/api/hotels/:id', (req, res) => {
@@ -79,6 +85,58 @@ app.delete('/api/hotels/:id', (req, res) => {
   } else {
     res.status(404).json({ error: 'Hotel não encontrado' });
   }
+});
+
+// Rota para adicionar concorrente
+app.post('/api/hotels/:id/concorrentes', (req, res) => {
+  const hotelId = parseInt(req.params.id);
+  const { concorrenteId, concorrente_id } = req.body;
+  
+  // Aceitar ambos os formatos para compatibilidade
+  const concorrenteIdFinal = concorrenteId || concorrente_id;
+  
+  const hotel = hoteis.find(h => h.id === hotelId);
+  const concorrente = hoteis.find(h => h.id === parseInt(concorrenteIdFinal));
+  
+  if (!hotel) {
+    return res.status(404).json({ error: 'Hotel não encontrado' });
+  }
+  
+  if (!concorrente) {
+    return res.status(404).json({ error: 'Hotel concorrente não encontrado' });
+  }
+  
+  // Adicionar concorrente se não existir
+  if (!hotel.concorrentes.includes(concorrente.nome)) {
+    hotel.concorrentes.push(concorrente.nome);
+  }
+  
+  res.json({
+    success: true,
+    data: hotel
+  });
+});
+
+// Rota para remover concorrente
+app.delete('/api/hotels/:id/concorrentes/:concorrenteNome', (req, res) => {
+  const hotelId = parseInt(req.params.id);
+  const concorrenteNome = req.params.concorrenteNome;
+  
+  const hotel = hoteis.find(h => h.id === hotelId);
+  
+  if (!hotel) {
+    return res.status(404).json({ error: 'Hotel não encontrado' });
+  }
+  
+  const index = hotel.concorrentes.indexOf(concorrenteNome);
+  if (index !== -1) {
+    hotel.concorrentes.splice(index, 1);
+  }
+  
+  res.json({
+    success: true,
+    data: hotel
+  });
 });
 
 app.get('/api/tarifas', (req, res) => {
