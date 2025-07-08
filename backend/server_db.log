@@ -1,0 +1,21 @@
+nohup: ignoring input
+🔄 Inicializando conexão com banco de dados...
+🔄 Tentando conectar com Produção OSH...
+Ignoring invalid configuration option passed to Connection: name. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: timeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+❌ Falha ao conectar com Produção OSH: getaddrinfo ENOTFOUND osh-apps_mariaddb-rateshopper
+🔄 Tentando conectar com Localhost...
+Ignoring invalid configuration option passed to Connection: name. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: timeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+❌ Falha ao conectar com Localhost: 
+🔄 Tentando conectar com 127.0.0.1...
+Ignoring invalid configuration option passed to Connection: name. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: timeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+❌ Falha ao conectar com 127.0.0.1: connect ECONNREFUSED 127.0.0.1:3306
+❌ Não foi possível conectar com nenhuma configuração
+⚠️  Banco de dados não disponível, usando dados em memória
+🚀 Servidor rodando na porta 3001
+📊 Status do banco: Memória (fallback)
