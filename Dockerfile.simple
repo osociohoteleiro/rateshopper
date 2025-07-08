@@ -1,0 +1,24 @@
+# Dockerfile Simplificado para Troubleshooting
+FROM node:18-alpine
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar package.json do backend
+COPY backend/package*.json ./
+
+# Instalar dependências
+RUN npm install
+
+# Copiar código do backend
+COPY backend/ ./
+
+# Criar diretório para uploads
+RUN mkdir -p uploads
+
+# Expor porta
+EXPOSE 3001
+
+# Comando simples para debug
+CMD ["node", "server_production.js"]
+
