@@ -1,4 +1,4 @@
-import { RefreshCw, BarChart3, Hotel, Upload, PieChart, User, LogOut, Settings } from 'lucide-react';
+import { RefreshCw, BarChart3, Hotel, Upload, PieChart, User, LogOut, Settings, FileSpreadsheet } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -20,6 +20,7 @@ const Header = ({ usuario, onLogout }) => {
     { path: '/', icon: <BarChart3 className="w-5 h-5" />, text: 'Dashboard' },
     { path: '/hotels', icon: <Hotel className="w-5 h-5" />, text: 'Hotéis' },
     { path: '/upload', icon: <Upload className="w-5 h-5" />, text: 'Upload' },
+    { path: '/planilhas', icon: <FileSpreadsheet className="w-5 h-5" />, text: 'Planilhas' },
     { path: '/comparative', icon: <PieChart className="w-5 h-5" />, text: 'Comparativo' },
   ];
 

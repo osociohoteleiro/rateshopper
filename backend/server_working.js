@@ -62,12 +62,11 @@ const hoteis = [
   }
 ];
 
-// Dados mock para tarifas
-const tarifas = [
-  { id: 1, hotel_id: 1, data: '2025-07-08', preco: 228.29, tipo_quarto: 'Standard' },
-  { id: 2, hotel_id: 2, data: '2025-07-08', preco: 322.00, tipo_quarto: 'Standard' },
-  { id: 3, hotel_id: 3, data: '2025-07-08', preco: 376.00, tipo_quarto: 'Standard' }
-];
+// Dados mock para tarifas (inicialmente vazio)
+const tarifas = [];
+
+// Array para armazenar informações das planilhas importadas
+const planilhasImportadas = [];
 
 // Rotas da API
 app.get('/api/hotels', (req, res) => {
@@ -203,26 +202,144 @@ app.post('/api/upload', upload.single('arquivo'), (req, res) => {
       return res.status(400).json({ error: 'Hotel de destino não especificado' });
     }
 
+    const hotel = hoteis.find(h => h.id === parseInt(hotelId));
+    if (!hotel) {
+      return res.status(400).json({ error: 'Hotel não encontrado' });
+    }
+
+    // Criar registro da planilha importada
+    const planilhaId = Date.now().toString();
+    const planilhaInfo = {
+      id: planilhaId,
+      nome_arquivo: req.file.originalname,
+      hotel_id: parseInt(hotelId),
+      hotel_nome: hotel.nome,
+      data_importacao: new Date().toISOString(),
+      arquivo_salvo: req.file.filename
+    };
+
     // Simular processamento do arquivo
     const novasTarifas = [
-      { id: tarifas.length + 1, hotel_id: parseInt(hotelId), data: '2025-07-08', preco: 250.00, tipo_quarto: 'Standard' },
-      { id: tarifas.length + 2, hotel_id: parseInt(hotelId), data: '2025-07-09', preco: 275.00, tipo_quarto: 'Standard' },
-      { id: tarifas.length + 3, hotel_id: parseInt(hotelId), data: '2025-07-10', preco: 300.00, tipo_quarto: 'Standard' }
+      { 
+        id: tarifas.length + 1, 
+        hotel_id: parseInt(hotelId), 
+        planilha_id: planilhaId,
+        data: '2025-07-08', 
+        preco: 250.00, 
+        tipo_quarto: 'Standard' 
+      },
+      { 
+        id: tarifas.length + 2, 
+        hotel_id: parseInt(hotelId), 
+        planilha_id: planilhaId,
+        data: '2025-07-09', 
+        preco: 275.00, 
+        tipo_quarto: 'Standard' 
+      },
+      { 
+        id: tarifas.length + 3, 
+        hotel_id: parseInt(hotelId), 
+        planilha_id: planilhaId,
+        data: '2025-07-10', 
+        preco: 300.00, 
+        tipo_quarto: 'Standard' 
+      }
     ];
+
+    // Adicionar informações da quantidade de tarifas à planilha
+    planilhaInfo.quantidade_tarifas = novasTarifas.length;
 
     // Adicionar as novas tarifas ao array
     tarifas.push(...novasTarifas);
+    
+    // Adicionar informações da planilha ao array
+    planilhasImportadas.push(planilhaInfo);
 
     res.json({
       success: true,
       message: `Arquivo ${req.file.originalname} processado com sucesso`,
       tarifasImportadas: novasTarifas.length,
-      arquivo: req.file.filename
+      arquivo: req.file.filename,
+      planilha_id: planilhaId
     });
 
   } catch (error) {
     console.error('Erro no upload:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// Rota para listar planilhas importadas
+app.get('/api/planilhas', (req, res) => {
+  const { hotel_id } = req.query;
+  
+  let planilhasFiltradas = planilhasImportadas;
+  
+  if (hotel_id) {
+    planilhasFiltradas = planilhasImportadas.filter(p => p.hotel_id === parseInt(hotel_id));
+  }
+  
+  res.json({
+    success: true,
+    data: planilhasFiltradas
+  });
+});
+
+// Rota para excluir tarifas por planilha
+app.delete('/api/planilhas/:planilha_id', (req, res) => {
+  try {
+    const { planilha_id } = req.params;
+    
+    // Encontrar a planilha
+    const planilhaIndex = planilhasImportadas.findIndex(p => p.id === planilha_id);
+    if (planilhaIndex === -1) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Planilha não encontrada' 
+      });
+    }
+    
+    const planilha = planilhasImportadas[planilhaIndex];
+    
+    // Contar quantas tarifas serão removidas
+    const tarifasParaRemover = tarifas.filter(t => t.planilha_id === planilha_id);
+    const quantidadeRemovida = tarifasParaRemover.length;
+    
+    // Remover todas as tarifas associadas à planilha
+    for (let i = tarifas.length - 1; i >= 0; i--) {
+      if (tarifas[i].planilha_id === planilha_id) {
+        tarifas.splice(i, 1);
+      }
+    }
+    
+    // Remover a planilha da lista
+    planilhasImportadas.splice(planilhaIndex, 1);
+    
+    // Tentar remover o arquivo físico (opcional)
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const arquivoPath = path.join(__dirname, '../uploads', planilha.arquivo_salvo);
+      if (fs.existsSync(arquivoPath)) {
+        fs.unlinkSync(arquivoPath);
+      }
+    } catch (fileError) {
+      console.warn('Não foi possível remover o arquivo físico:', fileError.message);
+    }
+    
+    res.json({
+      success: true,
+      message: `Planilha "${planilha.nome_arquivo}" removida com sucesso`,
+      tarifas_removidas: quantidadeRemovida,
+      hotel_nome: planilha.hotel_nome
+    });
+    
+  } catch (error) {
+    console.error('Erro ao excluir planilha:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    });
   }
 });
 
