@@ -10,6 +10,7 @@ const hotelsRoutes = require('./src/routes/hotels');
 const tarifasRoutes = require('./src/routes/tarifas');
 const uploadRoutes = require('./src/routes/upload');
 const analiseRoutes = require('./src/routes/analise');
+const backupRoutes = require('./src/routes/backup');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +44,7 @@ app.use('/api/hotels', hotelsRoutes);
 app.use('/api/tarifas', tarifasRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/analise', analiseRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Rota para verificar se o servidor está rodando
 app.get('/api/status', (req, res) => {
@@ -54,11 +56,17 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
+// Criar backup inicial ao iniciar o servidor
+const { createBackup } = require('./src/utils/backup');
+
 // Iniciar servidor
 const startServer = async () => {
   try {
     // Sincronizar modelos com o banco de dados
     await syncModels();
+    
+    // Criar backup inicial
+    await createBackup('initial');
     
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Servidor rodando na porta ${PORT}`);
