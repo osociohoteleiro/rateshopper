@@ -26,7 +26,7 @@ const HotelManagement = ({ onRefresh }) => {
   const fetchHotels = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hotels`)
+      const response = await fetch(`${API_BASE_URL}/api/hoteis`)
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
