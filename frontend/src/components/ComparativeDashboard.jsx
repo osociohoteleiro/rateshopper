@@ -1,458 +1,478 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Button } from './ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Input } from './ui/input'
-import { Label } from './ui/label'
-import { Badge } from './ui/badge'
-import { TrendingUp, Hotel, Calendar, BarChart3, Search, LineChart } from 'lucide-react'
-import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Button } from '@/components/ui/button.jsx'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
+import { Input } from '@/components/ui/input.jsx'
+import { Label } from '@/components/ui/label.jsx'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
+import { Badge } from '@/components/ui/badge.jsx'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { Hotel, Calendar, TrendingUp, TrendingDown, Minus, AlertTriangle, Target } from 'lucide-react'
+import { apiUrl } from '../utils/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-
-// Cores para o gráfico
-const CHART_COLORS = [
-  '#3b82f6', // Azul (hotel principal)
-  '#ef4444', // Vermelho
-  '#f97316', // Laranja
-  '#10b981', // Verde
-  '#8b5cf6', // Roxo
-  '#ec4899', // Rosa
-  '#6366f1', // Índigo
-  '#14b8a6', // Teal
-  '#f59e0b', // Âmbar
-  '#64748b'  // Cinza azulado
-]
-
-const ComparativeDashboard = () => {
-  const [hotels, setHotels] = useState([])
+function ComparativeDashboard() {
+  const [hoteis, setHoteis] = useState([])
   const [selectedHotel, setSelectedHotel] = useState('')
-  const [dateRange, setDateRange] = useState({
-    inicio: '',
-    fim: ''
-  })
-  const [analysisData, setAnalysisData] = useState(null)
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
   const [loading, setLoading] = useState(false)
+  const [dadosComparativos, setDadosComparativos] = useState(null)
+  const [timeline, setTimeline] = useState(null)
+  const [oportunidades, setOportunidades] = useState(null)
 
-  const fetchHotels = async () => {
+  const fetchHoteis = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hotels`)
+      const response = await fetch(apiUrl('/api/hoteis'))
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setHotels(data.data || [])
+          setHoteis(data.hoteis)
         }
       }
     } catch (error) {
       console.error('Erro ao buscar hotéis:', error)
-      setHotels([])
     }
   }
 
-  useEffect(() => {
-    fetchHotels()
-  }, [])
+  const fetchDadosComparativos = async () => {
+    if (!selectedHotel) return
 
-  const handleAnalysis = async () => {
-    if (!selectedHotel || !dateRange.inicio || !dateRange.fim) {
-      alert('Por favor, selecione um hotel e defina o período de análise')
-      return
-    }
-
-    setLoading(true)
     try {
-      const params = new URLSearchParams({
-        hotel_id: selectedHotel,
-        data_inicio: dateRange.inicio,
-        data_fim: dateRange.fim
-      })
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (dataInicio) params.append('data_inicio', dataInicio)
+      if (dataFim) params.append('data_fim', dataFim)
 
-      const response = await fetch(`${API_BASE_URL}/api/analise/comparativo?${params}`)
+      const response = await fetch(`/api/comparativo/${selectedHotel}?${params}`)
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          console.log('Dados da análise:', data.data)
-          setAnalysisData(data.data)
-        } else {
-          alert(data.error || 'Erro na análise')
-          setAnalysisData(null)
+          setDadosComparativos(data)
         }
-      } else {
-        const data = await response.json()
-        alert(data.error || 'Erro na análise')
-        setAnalysisData(null)
       }
     } catch (error) {
-      console.error('Erro na análise:', error)
-      alert('Erro de conexão')
-      setAnalysisData(null)
+      console.error('Erro ao buscar dados comparativos:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const formatPrice = (price) => {
-    if (price === null || price === undefined) return '-'
+  const fetchTimeline = async () => {
+    if (!selectedHotel || !dataInicio || !dataFim) return
+
     try {
-      return parseFloat(price || 0).toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
+      const params = new URLSearchParams({
+        data_inicio: dataInicio,
+        data_fim: dataFim
       })
-    } catch {
-      return 'R$ 0,00'
-    }
-  }
 
-  const formatDate = (dateString) => {
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('pt-BR')
-    } catch {
-      return 'Data inválida'
-    }
-  }
-
-  // Função para determinar a cor do preço com base na comparação
-  const getPriceColorClass = (hotelPrice, competitorPrice) => {
-    if (hotelPrice === null || competitorPrice === null) return ''
-    
-    // Se o preço do concorrente for mais alto que o preço do hotel
-    if (competitorPrice > hotelPrice) {
-      return 'text-green-600 font-medium'
-    }
-    
-    // Calcular a diferença percentual
-    const percentDiff = ((hotelPrice - competitorPrice) / hotelPrice) * 100
-    
-    // Se o preço do concorrente for até 10% mais barato
-    if (percentDiff <= 10) {
-      return 'text-orange-500 font-medium'
-    }
-    
-    // Se o preço do concorrente for mais de 10% mais barato
-    return 'text-red-600 font-medium'
-  }
-
-  // Preparar dados para o gráfico Recharts
-  const prepareChartData = () => {
-    if (!analysisData || !analysisData.dados_grafico) return []
-    
-    const { datas, series } = analysisData.dados_grafico
-    
-    return datas.map((data, index) => {
-      const dataObj = {
-        data: formatDate(data)
+      const response = await fetch(`/api/comparativo/${selectedHotel}/timeline?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setTimeline(data)
+        }
       }
-      
-      series.forEach(serie => {
-        dataObj[serie.nome] = serie.valores[index]
+    } catch (error) {
+      console.error('Erro ao buscar timeline:', error)
+    }
+  }
+
+  const fetchOportunidades = async () => {
+    if (!selectedHotel) return
+
+    try {
+      const params = new URLSearchParams()
+      if (dataInicio) params.append('data_inicio', dataInicio)
+      if (dataFim) params.append('data_fim', dataFim)
+
+      const response = await fetch(`/api/comparativo/${selectedHotel}/oportunidades?${params}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setOportunidades(data)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar oportunidades:', error)
+    }
+  }
+
+  const handleAnalyze = () => {
+    fetchDadosComparativos()
+    fetchTimeline()
+    fetchOportunidades()
+  }
+
+  useEffect(() => {
+    fetchHoteis()
+    
+    // Definir período padrão (próximos 30 dias)
+    const hoje = new Date()
+    const em30Dias = new Date(hoje)
+    em30Dias.setDate(hoje.getDate() + 30)
+    
+    setDataInicio(hoje.toISOString().split('T')[0])
+    setDataFim(em30Dias.toISOString().split('T')[0])
+  }, [])
+
+  const prepareTimelineData = () => {
+    if (!timeline) return []
+
+    const data = []
+    Object.entries(timeline.timeline).forEach(([date, hotelsData]) => {
+      const entry = { date: new Date(date).toLocaleDateString('pt-BR') }
+      Object.entries(hotelsData).forEach(([hotelName, hotelData]) => {
+        entry[hotelName] = hotelData.preco
       })
-      
-      return dataObj
+      data.push(entry)
     })
+    return data
+  }
+
+  const getPositionIcon = (posicionamento) => {
+    switch (posicionamento) {
+      case 'alto':
+        return <TrendingUp className="h-4 w-4 text-red-500" />
+      case 'baixo':
+        return <TrendingDown className="h-4 w-4 text-green-500" />
+      default:
+        return <Minus className="h-4 w-4 text-blue-500" />
+    }
+  }
+
+  const getPositionColor = (posicionamento) => {
+    switch (posicionamento) {
+      case 'alto':
+        return 'text-red-600 bg-red-50 border-red-200'
+      case 'baixo':
+        return 'text-green-600 bg-green-50 border-green-200'
+      default:
+        return 'text-blue-600 bg-blue-50 border-blue-200'
+    }
+  }
+
+  const getOportunidadeIcon = (tipo) => {
+    switch (tipo) {
+      case 'aumentar_preco':
+        return <TrendingUp className="h-4 w-4 text-green-500" />
+      case 'reduzir_preco':
+        return <TrendingDown className="h-4 w-4 text-red-500" />
+      default:
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">Dashboard Comparativo</h2>
-        <p className="text-gray-600">Análise comparativa de tarifas entre concorrentes</p>
-      </div>
-
       {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Search className="w-5 h-5" />
-            <span>Filtros de Análise</span>
+            <Target className="h-5 w-5" />
+            <span>Análise Comparativa</span>
           </CardTitle>
           <CardDescription>
-            Selecione o hotel foco e o período para análise comparativa
+            Compare tarifas do seu hotel com os concorrentes
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Seleção de Hotel */}
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="hotel-select">Hotel Foco</Label>
+              <Label htmlFor="hotel">Hotel Foco *</Label>
               <Select value={selectedHotel} onValueChange={setSelectedHotel}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um hotel" />
+                  <SelectValue placeholder="Selecione o hotel" />
                 </SelectTrigger>
                 <SelectContent>
-                  {hotels.map((hotel) => (
+                  {hoteis.map((hotel) => (
                     <SelectItem key={hotel.id} value={hotel.id.toString()}>
-                      <div className="flex items-center space-x-2">
-                        <Hotel className="w-4 h-4" />
-                        <span>{hotel.nome}</span>
-                      </div>
+                      {hotel.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Data Início */}
+            
             <div className="space-y-2">
-              <Label htmlFor="date-start">Data Início</Label>
+              <Label htmlFor="data-inicio">Data Início</Label>
               <Input
-                id="date-start"
+                id="data-inicio"
                 type="date"
-                value={dateRange.inicio}
-                onChange={(e) => setDateRange({ ...dateRange, inicio: e.target.value })}
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
               />
             </div>
-
-            {/* Data Fim */}
+            
             <div className="space-y-2">
-              <Label htmlFor="date-end">Data Fim</Label>
+              <Label htmlFor="data-fim">Data Fim</Label>
               <Input
-                id="date-end"
+                id="data-fim"
                 type="date"
-                value={dateRange.fim}
-                onChange={(e) => setDateRange({ ...dateRange, fim: e.target.value })}
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
               />
             </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleAnalysis}
-              disabled={loading || !selectedHotel || !dateRange.inicio || !dateRange.fim}
-              className="flex items-center space-x-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>{loading ? 'Analisando...' : 'Analisar'}</span>
-            </Button>
+            
+            <div className="flex items-end">
+              <Button 
+                onClick={handleAnalyze}
+                disabled={!selectedHotel || loading}
+                className="w-full"
+              >
+                {loading ? 'Analisando...' : 'Analisar'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Resultados da Análise */}
-      {loading && (
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-2 text-gray-600">Processando análise...</span>
-          </CardContent>
-        </Card>
-      )}
+      {/* Resultados */}
+      {dadosComparativos && (
+        <Tabs defaultValue="resumo" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="resumo">Resumo</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="oportunidades">Oportunidades</TabsTrigger>
+            <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+          </TabsList>
 
-      {analysisData && !loading && (
-        <div className="space-y-6">
-          {/* Resumo Geral */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5" />
-                <span>Resumo da Análise</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-600 font-medium">Período Analisado</p>
-                  <p className="text-lg font-bold text-blue-700">
-                    {formatDate(dateRange.inicio)} - {formatDate(dateRange.fim)}
+          <TabsContent value="resumo" className="space-y-4">
+            {/* Cards de Resumo */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Posicionamento</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center space-x-2">
+                    {getPositionIcon(dadosComparativos.analise.posicionamento)}
+                    <span className={`text-lg font-bold ${getPositionColor(dadosComparativos.analise.posicionamento).split(' ')[0]}`}>
+                      {dadosComparativos.analise.posicionamento.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    vs. concorrência
                   </p>
-                </div>
-                
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-green-600 font-medium">Preço Médio</p>
-                  <p className="text-lg font-bold text-green-700">
-                    {formatPrice(analysisData.preco_medio_hotel)}
-                  </p>
-                </div>
-                
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <p className="text-sm text-purple-600 font-medium">Concorrentes</p>
-                  <p className="text-lg font-bold text-purple-700">
-                    {analysisData.total_concorrentes || 0}
-                  </p>
-                </div>
-                
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <p className="text-sm text-orange-600 font-medium">Tarifas Analisadas</p>
-                  <p className="text-lg font-bold text-orange-700">
-                    {analysisData.total_tarifas || 0}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Tabela de Preços */}
-          {analysisData.tabela_precos && analysisData.tabela_precos.hoteis && analysisData.tabela_precos.hoteis.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Preço Médio</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">
+                    R$ {dadosComparativos.analise.hotel_foco.preco_medio.toFixed(2)}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Concorrência: R$ {dadosComparativos.analise.concorrencia.preco_medio.toFixed(2)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Diferença</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${dadosComparativos.analise.diferenca_media >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {dadosComparativos.analise.diferenca_media >= 0 ? '+' : ''}
+                    {dadosComparativos.analise.percentual_diferenca.toFixed(1)}%
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    R$ {Math.abs(dadosComparativos.analise.diferenca_media).toFixed(2)}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Concorrentes */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="w-5 h-5" />
-                  <span>Tabela Comparativa de Preços</span>
-                </CardTitle>
-                <CardDescription>
-                  Comparação de preços diários entre o hotel e seus concorrentes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="border border-gray-200 bg-gray-50 p-2 text-left">Hotel</th>
-                        {analysisData.tabela_precos.datas.map((data, index) => (
-                          <th key={index} className="border border-gray-200 bg-gray-50 p-2 text-center min-w-[100px]">
-                            {formatDate(data)}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analysisData.tabela_precos.hoteis.map((hotel, index) => {
-                        // O primeiro hotel é sempre o hotel principal (foco)
-                        const isMainHotel = index === 0;
-                        
-                        return (
-                          <tr key={hotel.id} className={isMainHotel ? "bg-blue-50" : ""}>
-                            <td className={`border border-gray-200 p-2 font-medium ${isMainHotel ? "text-blue-700" : ""}`}>
-                              {hotel.nome}
-                              {isMainHotel && <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Seu Hotel</span>}
-                            </td>
-                            {hotel.precos.map((preco, idx) => {
-                              // Se for o hotel principal, apenas exibe o preço normalmente
-                              if (isMainHotel) {
-                                return (
-                                  <td key={idx} className="border border-gray-200 p-2 text-center text-blue-700">
-                                    {formatPrice(preco)}
-                                  </td>
-                                );
-                              }
-                              
-                              // Para concorrentes, aplicar a lógica de cores
-                              const mainHotelPrice = analysisData.tabela_precos.hoteis[0].precos[idx];
-                              const colorClass = getPriceColorClass(mainHotelPrice, preco);
-                              
-                              return (
-                                <td key={idx} className={`border border-gray-200 p-2 text-center ${colorClass}`}>
-                                  {formatPrice(preco)}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                
-                {/* Legenda das cores */}
-                <div className="mt-4 flex flex-wrap gap-4 justify-end">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-green-600 rounded-full mr-2"></div>
-                    <span className="text-sm">Preço mais alto que o seu hotel</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
-                    <span className="text-sm">Até 10% mais barato que o seu hotel</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 bg-red-600 rounded-full mr-2"></div>
-                    <span className="text-sm">Mais de 10% mais barato que o seu hotel</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Gráfico de Linhas */}
-          {analysisData.dados_grafico && analysisData.dados_grafico.series && analysisData.dados_grafico.series.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <LineChart className="w-5 h-5" />
-                  <span>Evolução de Preços</span>
-                </CardTitle>
-                <CardDescription>
-                  Gráfico comparativo da evolução de preços no período
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RechartsLineChart
-                      data={prepareChartData()}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="data" 
-                        angle={-45} 
-                        textAnchor="end" 
-                        height={70} 
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis 
-                        tickFormatter={(value) => `R$${value}`}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <Tooltip 
-                        formatter={(value) => [`${formatPrice(value)}`, '']}
-                        labelFormatter={(label) => `Data: ${label}`}
-                      />
-                      <Legend />
-                      {analysisData.dados_grafico.series.map((serie, index) => (
-                        <Line
-                          key={serie.id}
-                          type="monotone"
-                          dataKey={serie.nome}
-                          stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                          strokeWidth={index === 0 ? 3 : 2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      ))}
-                    </RechartsLineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Insights */}
-          {analysisData.insights && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Insights da Análise</CardTitle>
+                <CardTitle>Concorrentes no Período</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {analysisData.insights.map((insight, index) => (
-                    <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                      <p className="text-blue-800">{insight}</p>
+                  {Object.entries(dadosComparativos.analise.concorrentes).map(([id, concorrente]) => (
+                    <div key={id} className="flex justify-between items-center p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{concorrente.nome}</p>
+                        <p className="text-sm text-gray-500">{concorrente.total_dias} dias com dados</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">R$ {concorrente.preco_medio.toFixed(2)}</p>
+                        <p className="text-xs text-gray-500">
+                          R$ {concorrente.preco_min.toFixed(2)} - R$ {concorrente.preco_max.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="timeline" className="space-y-4">
+            {timeline && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evolução de Preços</CardTitle>
+                  <CardDescription>
+                    Comparação temporal entre {dadosComparativos.hotel_foco.nome} e concorrentes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-96">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={prepareTimelineData()}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip 
+                          formatter={(value) => [`R$ ${value?.toFixed(2)}`, 'Preço']}
+                          labelFormatter={(label) => `Data: ${label}`}
+                        />
+                        <Legend />
+                        {timeline.hoteis.map((hotel, index) => (
+                          <Line
+                            key={hotel.id}
+                            type="monotone"
+                            dataKey={hotel.nome}
+                            stroke={hotel.is_foco ? '#2563eb' : `hsl(${index * 60}, 70%, 50%)`}
+                            strokeWidth={hotel.is_foco ? 3 : 2}
+                            dot={hotel.is_foco}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="oportunidades" className="space-y-4">
+            {oportunidades && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Oportunidades de Pricing</span>
+                    <Badge variant="outline">
+                      {oportunidades.total_oportunidades} oportunidades
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Análise de oportunidades para {oportunidades.hotel.nome}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {oportunidades.total_oportunidades === 0 ? (
+                    <div className="text-center py-8">
+                      <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">Nenhuma oportunidade identificada no período</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {oportunidades.oportunidades.map((oportunidade, index) => (
+                        <div key={index} className="border rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-3">
+                              {getOportunidadeIcon(oportunidade.tipo)}
+                              <div>
+                                <p className="font-medium">
+                                  {new Date(oportunidade.data).toLocaleDateString('pt-BR')}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {oportunidade.descricao}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold">R$ {oportunidade.preco_atual.toFixed(2)}</p>
+                              <p className="text-xs text-gray-500">
+                                Concorrência: R$ {oportunidade.preco_min_concorrencia.toFixed(2)} - R$ {oportunidade.preco_max_concorrencia.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="detalhes" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Dados Detalhados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Hotel Foco: {dadosComparativos.hotel_foco.nome}</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Preço Mínimo:</span>
+                        <p className="font-medium">R$ {dadosComparativos.analise.hotel_foco.preco_min.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Preço Máximo:</span>
+                        <p className="font-medium">R$ {dadosComparativos.analise.hotel_foco.preco_max.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Preço Médio:</span>
+                        <p className="font-medium">R$ {dadosComparativos.analise.hotel_foco.preco_medio.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Total de Dias:</span>
+                        <p className="font-medium">{dadosComparativos.analise.hotel_foco.total_dias}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium mb-2">Concorrência</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Preço Mínimo:</span>
+                        <p className="font-medium">R$ {dadosComparativos.analise.concorrencia.preco_min.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Preço Máximo:</span>
+                        <p className="font-medium">R$ {dadosComparativos.analise.concorrencia.preco_max.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Preço Médio:</span>
+                        <p className="font-medium">R$ {dadosComparativos.analise.concorrencia.preco_medio.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
 
-      {/* Estado Inicial */}
-      {!analysisData && !loading && (
+      {/* Estado vazio */}
+      {!dadosComparativos && !loading && (
         <Card>
           <CardContent className="text-center py-12">
-            <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <Hotel className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               Análise Comparativa
             </h3>
-            <p className="text-gray-600 mb-4">
-              Selecione um hotel e período para iniciar a análise comparativa
+            <p className="text-gray-500 mb-4">
+              Selecione um hotel e período para começar a análise
             </p>
-            <p className="text-sm text-gray-500">
-              A análise irá comparar as tarifas do hotel selecionado com seus concorrentes
-            </p>
+            <div className="text-sm text-gray-400">
+              <p>• Compare tarifas com concorrentes</p>
+              <p>• Identifique oportunidades de pricing</p>
+              <p>• Visualize tendências temporais</p>
+            </div>
           </CardContent>
         </Card>
       )}

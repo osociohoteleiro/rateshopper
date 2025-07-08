@@ -1,109 +1,88 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
-import { Label } from './ui/label'
-import { Badge } from './ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Hotel, Plus, Edit, Trash2, MapPin, ExternalLink, Users, UserPlus, UserMinus } from 'lucide-react'
+import { Button } from '@/components/ui/button.jsx'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx'
+import { Input } from '@/components/ui/input.jsx'
+import { Label } from '@/components/ui/label.jsx'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
+import { Badge } from '@/components/ui/badge.jsx'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog.jsx'
+import { Hotel, Plus, Edit, Trash2, Users, ExternalLink, Star } from 'lucide-react'
+import { apiUrl } from '../utils/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-
-const HotelManagement = ({ onRefresh }) => {
-  const [hotels, setHotels] = useState([])
+function HotelManagement({ onUpdate }) {
+  const [hoteis, setHoteis] = useState([])
   const [loading, setLoading] = useState(false)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isConcorrenteDialogOpen, setIsConcorrenteDialogOpen] = useState(false)
+  const [showForm, setShowForm] = useState(false)
   const [editingHotel, setEditingHotel] = useState(null)
-  const [selectedConcorrente, setSelectedConcorrente] = useState('')
+  const [selectedHotel, setSelectedHotel] = useState(null)
   const [formData, setFormData] = useState({
     nome: '',
-    url_booking: '',
+    booking_url: '',
+    categoria: '',
     localizacao: ''
   })
 
-  const fetchHotels = async () => {
-    setLoading(true)
+  const fetchHoteis = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hotels`)
+      setLoading(true)
+      const response = await fetch(apiUrl('/api/hoteis'))
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setHotels(data.data || [])
+          setHoteis(data.hoteis)
         }
       }
     } catch (error) {
       console.error('Erro ao buscar hotéis:', error)
-      setHotels([])
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchHotels()
-  }, [])
-
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    if (!formData.nome.trim()) {
-      alert('Nome do hotel é obrigatório')
-      return
-    }
-
     try {
-      console.log('Enviando dados do hotel:', formData)
-      
-      const url = editingHotel 
-        ? `${API_BASE_URL}/api/hotels/${editingHotel.id}`
-        : `${API_BASE_URL}/api/hotels`
-      
+      const url = editingHotel ? `/api/hoteis/${editingHotel.id}` : '/api/hoteis'
       const method = editingHotel ? 'PUT' : 'POST'
-      
-      // Garantir que url_booking não seja undefined
-      const dataToSend = {
-        ...formData,
-        url_booking: formData.url_booking || ''
-      }
       
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(dataToSend)
+        body: JSON.stringify({
+          ...formData,
+          categoria: formData.categoria ? parseInt(formData.categoria) : null
+        })
       })
 
-      console.log('Status da resposta:', response.status)
-      
       const data = await response.json()
-      console.log('Resposta do servidor:', data)
       
-      if (response.ok && data.success) {
-        setIsDialogOpen(false)
+      if (data.success) {
+        await fetchHoteis()
+        setShowForm(false)
         setEditingHotel(null)
-        setFormData({ nome: '', url_booking: '', localizacao: '' })
-        fetchHotels()
-        onRefresh()
+        setFormData({ nome: '', booking_url: '', categoria: '', localizacao: '' })
+        if (onUpdate) onUpdate()
       } else {
         alert(data.error || 'Erro ao salvar hotel')
       }
     } catch (error) {
       console.error('Erro ao salvar hotel:', error)
-      alert('Erro ao salvar hotel: ' + error.message)
+      alert('Erro ao salvar hotel')
     }
   }
 
   const handleEdit = (hotel) => {
     setEditingHotel(hotel)
     setFormData({
-      nome: hotel.nome || '',
-      url_booking: hotel.url_booking || '',
+      nome: hotel.nome,
+      booking_url: hotel.booking_url || '',
+      categoria: hotel.categoria ? hotel.categoria.toString() : '',
       localizacao: hotel.localizacao || ''
     })
-    setIsDialogOpen(true)
+    setShowForm(true)
   }
 
   const handleDelete = async (hotel) => {
@@ -112,20 +91,16 @@ const HotelManagement = ({ onRefresh }) => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hotels/${hotel.id}`, {
+      const response = await fetch(`/api/hoteis/${hotel.id}`, {
         method: 'DELETE'
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          fetchHotels()
-          onRefresh()
-        } else {
-          alert(data.error || 'Erro ao excluir hotel')
-        }
+      const data = await response.json()
+      
+      if (data.success) {
+        await fetchHoteis()
+        if (onUpdate) onUpdate()
       } else {
-        const data = await response.json()
         alert(data.error || 'Erro ao excluir hotel')
       }
     } catch (error) {
@@ -134,45 +109,360 @@ const HotelManagement = ({ onRefresh }) => {
     }
   }
 
-  const openNewHotelDialog = () => {
-    setEditingHotel(null)
-    setFormData({ nome: '', url_booking: '', localizacao: '' })
-    setIsDialogOpen(true)
-  }
-
-  const openConcorrenteDialog = (hotel) => {
-    setEditingHotel(hotel)
-    setSelectedConcorrente('')
-    setIsConcorrenteDialogOpen(true)
-  }
-
-  const handleAddConcorrente = async () => {
-    if (!selectedConcorrente || !editingHotel) {
-      alert('Selecione um hotel concorrente')
-      return
-    }
-
+  const openConcorrentes = async (hotel) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hotels/${editingHotel.id}/concorrentes`, {
+      const response = await fetch(`/api/hoteis/${hotel.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setSelectedHotel(data.hotel)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar detalhes do hotel:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchHoteis()
+  }, [])
+
+  const renderStars = (categoria) => {
+    if (!categoria) return null
+    return (
+      <div className="flex items-center">
+        {[...Array(categoria)].map((_, i) => (
+          <Star key={i} className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <Tabs defaultValue="lista" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="lista">Lista de Hotéis</TabsTrigger>
+          <TabsTrigger value="novo">Novo Hotel</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="lista" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Hotéis Cadastrados</h3>
+            <Button onClick={() => fetchHoteis()} variant="outline" size="sm">
+              🔄 Atualizar
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">Carregando hotéis...</div>
+          ) : hoteis.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8">
+                <Hotel className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">Nenhum hotel cadastrado ainda</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Use a aba "Novo Hotel" para cadastrar seu primeiro hotel
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {hoteis.map((hotel) => (
+                <Card key={hotel.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h4 className="text-lg font-semibold">{hotel.nome}</h4>
+                          {hotel.categoria && renderStars(hotel.categoria)}
+                        </div>
+                        
+                        {hotel.localizacao && (
+                          <p className="text-sm text-gray-600 mb-2">📍 {hotel.localizacao}</p>
+                        )}
+                        
+                        {hotel.booking_url && (
+                          <a 
+                            href={hotel.booking_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-sm flex items-center space-x-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            <span>Ver na Booking.com</span>
+                          </a>
+                        )}
+                        
+                        <div className="flex items-center space-x-4 mt-3">
+                          <Badge variant="secondary">
+                            {hotel.total_tarifas} tarifas
+                          </Badge>
+                          <Badge variant="outline">
+                            {hotel.total_concorrentes} concorrentes
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openConcorrentes(hotel)}
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Concorrentes - {selectedHotel?.nome}</DialogTitle>
+                              <DialogDescription>
+                                Gerencie os concorrentes deste hotel
+                              </DialogDescription>
+                            </DialogHeader>
+                            {selectedHotel && (
+                              <ConcorrentesManager 
+                                hotel={selectedHotel} 
+                                hoteis={hoteis}
+                                onUpdate={fetchHoteis}
+                              />
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleEdit(hotel)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDelete(hotel)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="novo" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Plus className="h-5 w-5" />
+                <span>{editingHotel ? 'Editar Hotel' : 'Novo Hotel'}</span>
+              </CardTitle>
+              <CardDescription>
+                {editingHotel ? 'Atualize as informações do hotel' : 'Cadastre um novo hotel no sistema'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nome">Nome do Hotel *</Label>
+                    <Input
+                      id="nome"
+                      value={formData.nome}
+                      onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                      placeholder="Ex: Hotel Copacabana Palace"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="categoria">Categoria (Estrelas)</Label>
+                    <Select 
+                      value={formData.categoria} 
+                      onValueChange={(value) => setFormData({...formData, categoria: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">⭐ 1 Estrela</SelectItem>
+                        <SelectItem value="2">⭐⭐ 2 Estrelas</SelectItem>
+                        <SelectItem value="3">⭐⭐⭐ 3 Estrelas</SelectItem>
+                        <SelectItem value="4">⭐⭐⭐⭐ 4 Estrelas</SelectItem>
+                        <SelectItem value="5">⭐⭐⭐⭐⭐ 5 Estrelas</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="booking_url">URL da Booking.com</Label>
+                  <Input
+                    id="booking_url"
+                    value={formData.booking_url}
+                    onChange={(e) => setFormData({...formData, booking_url: e.target.value})}
+                    placeholder="https://www.booking.com/hotel/br/..."
+                    type="url"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Cole aqui o link da página do hotel na Booking.com
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="localizacao">Localização</Label>
+                  <Input
+                    id="localizacao"
+                    value={formData.localizacao}
+                    onChange={(e) => setFormData({...formData, localizacao: e.target.value})}
+                    placeholder="Ex: Copacabana, Rio de Janeiro"
+                  />
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button type="submit" className="flex-1">
+                    {editingHotel ? 'Atualizar Hotel' : 'Cadastrar Hotel'}
+                  </Button>
+                  {editingHotel && (
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => {
+                        setEditingHotel(null)
+                        setFormData({ nome: '', booking_url: '', categoria: '', localizacao: '' })
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog para edição inline */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Hotel</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do hotel
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-nome">Nome do Hotel *</Label>
+              <Input
+                id="edit-nome"
+                value={formData.nome}
+                onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-categoria">Categoria</Label>
+              <Select 
+                value={formData.categoria} 
+                onValueChange={(value) => setFormData({...formData, categoria: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">⭐ 1 Estrela</SelectItem>
+                  <SelectItem value="2">⭐⭐ 2 Estrelas</SelectItem>
+                  <SelectItem value="3">⭐⭐⭐ 3 Estrelas</SelectItem>
+                  <SelectItem value="4">⭐⭐⭐⭐ 4 Estrelas</SelectItem>
+                  <SelectItem value="5">⭐⭐⭐⭐⭐ 5 Estrelas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-booking">URL da Booking.com</Label>
+              <Input
+                id="edit-booking"
+                value={formData.booking_url}
+                onChange={(e) => setFormData({...formData, booking_url: e.target.value})}
+                type="url"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-localizacao">Localização</Label>
+              <Input
+                id="edit-localizacao"
+                value={formData.localizacao}
+                onChange={(e) => setFormData({...formData, localizacao: e.target.value})}
+              />
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button type="submit" className="flex-1">
+                Salvar Alterações
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => setShowForm(false)}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function ConcorrentesManager({ hotel, hoteis, onUpdate }) {
+  const [concorrentes, setConcorrentes] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  const fetchConcorrentes = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/hoteis/${hotel.id}/concorrentes`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setConcorrentes(data.concorrentes)
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao buscar concorrentes:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const adicionarConcorrente = async (concorrenteId) => {
+    try {
+      const response = await fetch(`/api/hoteis/${hotel.id}/concorrentes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ concorrente_id: selectedConcorrente })
+        body: JSON.stringify({ concorrente_id: parseInt(concorrenteId) })
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setIsConcorrenteDialogOpen(false)
-          setSelectedConcorrente('')
-          fetchHotels()
-          onRefresh()
-        } else {
-          alert(data.error || 'Erro ao adicionar concorrente')
-        }
+      const data = await response.json()
+      
+      if (data.success) {
+        await fetchConcorrentes()
+        if (onUpdate) onUpdate()
       } else {
-        const data = await response.json()
         alert(data.error || 'Erro ao adicionar concorrente')
       }
     } catch (error) {
@@ -181,26 +471,18 @@ const HotelManagement = ({ onRefresh }) => {
     }
   }
 
-  const handleRemoveConcorrente = async (hotel, concorrenteId) => {
-    if (!confirm('Tem certeza que deseja remover este concorrente?')) {
-      return
-    }
-
+  const removerConcorrente = async (concorrenteId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/hotels/${hotel.id}/concorrentes/${concorrenteId}`, {
+      const response = await fetch(`/api/hoteis/${hotel.id}/concorrentes/${concorrenteId}`, {
         method: 'DELETE'
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          fetchHotels()
-          onRefresh()
-        } else {
-          alert(data.error || 'Erro ao remover concorrente')
-        }
+      const data = await response.json()
+      
+      if (data.success) {
+        await fetchConcorrentes()
+        if (onUpdate) onUpdate()
       } else {
-        const data = await response.json()
         alert(data.error || 'Erro ao remover concorrente')
       }
     } catch (error) {
@@ -209,265 +491,63 @@ const HotelManagement = ({ onRefresh }) => {
     }
   }
 
-  // Filtrar hotéis disponíveis para serem concorrentes (excluindo o hotel atual e os que já são concorrentes)
-  const getAvailableConcorrentes = (hotel) => {
-    if (!hotel) return []
-    
-    const concorrentesIds = (hotel.concorrentes || []).map(c => c.id)
-    return hotels.filter(h => h.id !== hotel.id && !concorrentesIds.includes(h.id))
-  }
+  useEffect(() => {
+    fetchConcorrentes()
+  }, [hotel.id])
+
+  const hoteisDisponiveis = hoteis.filter(h => 
+    h.id !== hotel.id && !concorrentes.some(c => c.id === h.id)
+  )
 
   return (
-    <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900">Gestão de Hotéis</h2>
-          <p className="text-gray-600">Gerencie os hotéis cadastrados no sistema</p>
-        </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNewHotelDialog} className="flex items-center space-x-2">
-              <Plus className="w-4 h-4" />
-              <span>Novo Hotel</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingHotel ? 'Editar Hotel' : 'Novo Hotel'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingHotel 
-                  ? 'Edite as informações do hotel abaixo.'
-                  : 'Preencha as informações do novo hotel.'
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome do Hotel *</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  placeholder="Ex: Hotel Copacabana Palace"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="url_booking">URL Booking.com</Label>
-                <Input
-                  id="url_booking"
-                  type="url"
-                  value={formData.url_booking || ''}
-                  onChange={(e) => setFormData({ ...formData, url_booking: e.target.value })}
-                  placeholder="https://www.booking.com/hotel/..."
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="localizacao">Localização</Label>
-                <Input
-                  id="localizacao"
-                  value={formData.localizacao || ''}
-                  onChange={(e) => setFormData({ ...formData, localizacao: e.target.value })}
-                  placeholder="Ex: Copacabana, Rio de Janeiro"
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingHotel ? 'Salvar' : 'Criar'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dialog para adicionar concorrentes */}
-        <Dialog open={isConcorrenteDialogOpen} onOpenChange={setIsConcorrenteDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Adicionar Concorrente</DialogTitle>
-              <DialogDescription>
-                Selecione um hotel para adicionar como concorrente de {editingHotel?.nome}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="concorrente">Hotel Concorrente</Label>
-                <Select value={selectedConcorrente} onValueChange={setSelectedConcorrente}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um hotel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableConcorrentes(editingHotel).map((hotel) => (
-                      <SelectItem key={hotel.id} value={hotel.id.toString()}>
-                        {hotel.nome}
-                      </SelectItem>
-                    ))}
-                    {getAvailableConcorrentes(editingHotel).length === 0 && (
-                      <SelectItem value="none" disabled>
-                        Nenhum hotel disponível
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsConcorrenteDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleAddConcorrente}
-                  disabled={!selectedConcorrente || getAvailableConcorrentes(editingHotel).length === 0}
-                >
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+    <div className="space-y-4">
+      {/* Adicionar novo concorrente */}
+      <div className="space-y-2">
+        <Label>Adicionar Concorrente</Label>
+        <Select onValueChange={adicionarConcorrente}>
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione um hotel concorrente" />
+          </SelectTrigger>
+          <SelectContent>
+            {hoteisDisponiveis.map((h) => (
+              <SelectItem key={h.id} value={h.id.toString()}>
+                {h.nome} {h.localizacao && `- ${h.localizacao}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Lista de Hotéis */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Hotel className="w-5 h-5" />
-            <span>Hotéis Cadastrados</span>
-          </CardTitle>
-          <CardDescription>
-            Lista de todos os hotéis cadastrados no sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-gray-600">Carregando...</span>
-            </div>
-          ) : hotels.length === 0 ? (
-            <div className="text-center py-8">
-              <Hotel className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhum hotel cadastrado</p>
-              <p className="text-sm text-gray-400">Clique em "Novo Hotel" para começar</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {hotels.map((hotel) => (
-                <div key={hotel.id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Hotel className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">{hotel.nome}</h3>
-                        <div className="flex items-center space-x-4 mt-1">
-                          {hotel.localizacao && (
-                            <span className="flex items-center space-x-1 text-sm text-gray-600">
-                              <MapPin className="w-4 h-4" />
-                              <span>{hotel.localizacao}</span>
-                            </span>
-                          )}
-                          {hotel.url_booking && (
-                            <a 
-                              href={hotel.url_booking} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              <span>Booking.com</span>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openConcorrenteDialog(hotel)}
-                        className="flex items-center space-x-1"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        <span>Concorrente</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(hotel)}
-                        className="flex items-center space-x-1"
-                      >
-                        <Edit className="w-4 h-4" />
-                        <span>Editar</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(hotel)}
-                        className="flex items-center space-x-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span>Excluir</span>
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Lista de Concorrentes */}
-                  {hotel.concorrentes && hotel.concorrentes.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Users className="w-4 h-4 text-purple-600" />
-                        <h4 className="font-medium text-purple-600">Concorrentes</h4>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {hotel.concorrentes.map((concorrente) => (
-                          <div 
-                            key={concorrente.id} 
-                            className="flex items-center justify-between p-2 bg-white rounded border border-gray-200"
-                          >
-                            <div className="flex items-center space-x-2">
-                              <Hotel className="w-4 h-4 text-gray-600" />
-                              <span className="text-sm">{concorrente.nome}</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveConcorrente(hotel, concorrente.id)}
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <UserMinus className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+      {/* Lista de concorrentes */}
+      <div className="space-y-2">
+        <Label>Concorrentes Atuais ({concorrentes.length})</Label>
+        {loading ? (
+          <div className="text-center py-4">Carregando...</div>
+        ) : concorrentes.length === 0 ? (
+          <p className="text-gray-500 text-sm">Nenhum concorrente cadastrado</p>
+        ) : (
+          <div className="space-y-2">
+            {concorrentes.map((concorrente) => (
+              <div key={concorrente.id} className="flex justify-between items-center p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium">{concorrente.nome}</p>
+                  {concorrente.localizacao && (
+                    <p className="text-sm text-gray-500">{concorrente.localizacao}</p>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removerConcorrente(concorrente.id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
