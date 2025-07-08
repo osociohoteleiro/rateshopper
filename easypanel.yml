@@ -1,0 +1,65 @@
+# Configuração EasyPanel para Rate Shopper
+name: rate-shopper
+type: app
+
+# Configurações da aplicação
+app:
+  # Informações básicas
+  name: rate-shopper
+  description: "Sistema Rate Shopper - Análise comparativa de tarifas hoteleiras"
+  
+  # Configurações de build
+  build:
+    type: dockerfile
+    dockerfile: Dockerfile
+    context: .
+  
+  # Configurações de runtime
+  runtime:
+    port: 3001
+    healthcheck:
+      path: /api/status
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  # Variáveis de ambiente
+  env:
+    NODE_ENV: production
+    PORT: 3001
+    DB_HOST: osh-apps_mariaddb-rateshopper
+    DB_PORT: 3306
+    DB_USER: rateshopper
+    DB_PASSWORD: OSH4040()Xx!..nn
+    DB_NAME: rateshopper
+  
+  # Recursos
+  resources:
+    memory: 512Mi
+    cpu: 500m
+  
+  # Volumes para uploads
+  volumes:
+    - name: uploads
+      mountPath: /app/uploads
+      size: 1Gi
+  
+  # Configurações de rede
+  network:
+    domains:
+      - name: rate-shopper
+        port: 3001
+        ssl: true
+  
+  # Configurações de deploy
+  deploy:
+    replicas: 1
+    strategy: rolling
+    maxUnavailable: 0
+    maxSurge: 1
+  
+  # Configurações de logs
+  logging:
+    level: info
+    format: json
+
