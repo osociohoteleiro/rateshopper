@@ -226,6 +226,76 @@ app.post('/api/upload', upload.single('arquivo'), (req, res) => {
   }
 });
 
+// Rota para análise comparativa
+app.get('/api/analise/comparativo', (req, res) => {
+  const { hotel_id, data_inicio, data_fim } = req.query;
+  
+  if (!hotel_id || !data_inicio || !data_fim) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Parâmetros obrigatórios: hotel_id, data_inicio, data_fim' 
+    });
+  }
+
+  const hotel = hoteis.find(h => h.id === parseInt(hotel_id));
+  if (!hotel) {
+    return res.status(404).json({ 
+      success: false, 
+      error: 'Hotel não encontrado' 
+    });
+  }
+
+  // Simular dados de análise comparativa
+  const dadosComparativos = {
+    hotel_principal: {
+      id: hotel.id,
+      nome: hotel.nome,
+      preco_medio: 228.29,
+      total_tarifas: 30
+    },
+    concorrentes: hotel.concorrentes.map((concorrenteNome, index) => {
+      const concorrente = hoteis.find(h => h.nome === concorrenteNome);
+      return {
+        id: concorrente ? concorrente.id : index + 100,
+        nome: concorrenteNome,
+        preco_medio: 350.00 + (index * 50),
+        total_tarifas: 25 + (index * 5),
+        diferenca_percentual: ((350.00 + (index * 50)) - 228.29) / 228.29 * 100
+      };
+    }),
+    periodo: {
+      inicio: data_inicio,
+      fim: data_fim
+    },
+    resumo: {
+      total_hoteis_analisados: 1 + hotel.concorrentes.length,
+      preco_medio_mercado: 315.50,
+      posicao_ranking: 1,
+      economia_media: 87.21
+    },
+    grafico_evolucao: [
+      { data: '01/07', [hotel.nome]: 220, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 340 + (i * 30) }), {}) },
+      { data: '08/07', [hotel.nome]: 225, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 345 + (i * 30) }), {}) },
+      { data: '15/07', [hotel.nome]: 230, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 350 + (i * 30) }), {}) },
+      { data: '22/07', [hotel.nome]: 235, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 355 + (i * 30) }), {}) },
+      { data: '29/07', [hotel.nome]: 240, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 360 + (i * 30) }), {}) }
+    ],
+    insights: [
+      `Foram analisadas ${30} tarifas do ${hotel.nome} no período selecionado`,
+      `Preço médio do ${hotel.nome}: R$ 228,29`,
+      ...hotel.concorrentes.map((nome, i) => 
+        `${nome} está ${(((350 + i * 50) - 228.29) / 228.29 * 100).toFixed(2)}% mais caro que ${hotel.nome}`
+      ),
+      `${hotel.nome} está mais barato que ${hotel.concorrentes.length > 0 ? '100%' : '0%'} dos concorrentes analisados`
+    ]
+  };
+
+  res.json({
+    success: true,
+    data: dadosComparativos
+  });
+});
+
 // Rota para verificar se o servidor está rodando
 app.get('/api/status', (req, res) => {
   res.json({ status: 'online', timestamp: new Date() });
