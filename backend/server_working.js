@@ -1,9 +1,27 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Configuração do multer para upload de arquivos
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ storage: storage });
 
 // Middleware
 app.use(cors({
@@ -170,6 +188,42 @@ app.get('/api/analise', (req, res) => {
       'Eco Encanto Pousada está mais barato que 100% dos concorrentes analisados'
     ]
   });
+});
+
+// Rota para upload de tarifas
+app.post('/api/upload', upload.single('arquivo'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
+    }
+
+    const { hotelId } = req.body;
+    
+    if (!hotelId) {
+      return res.status(400).json({ error: 'Hotel de destino não especificado' });
+    }
+
+    // Simular processamento do arquivo
+    const novasTarifas = [
+      { id: tarifas.length + 1, hotel_id: parseInt(hotelId), data: '2025-07-08', preco: 250.00, tipo_quarto: 'Standard' },
+      { id: tarifas.length + 2, hotel_id: parseInt(hotelId), data: '2025-07-09', preco: 275.00, tipo_quarto: 'Standard' },
+      { id: tarifas.length + 3, hotel_id: parseInt(hotelId), data: '2025-07-10', preco: 300.00, tipo_quarto: 'Standard' }
+    ];
+
+    // Adicionar as novas tarifas ao array
+    tarifas.push(...novasTarifas);
+
+    res.json({
+      success: true,
+      message: `Arquivo ${req.file.originalname} processado com sucesso`,
+      tarifasImportadas: novasTarifas.length,
+      arquivo: req.file.filename
+    });
+
+  } catch (error) {
+    console.error('Erro no upload:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 });
 
 // Rota para verificar se o servidor está rodando
