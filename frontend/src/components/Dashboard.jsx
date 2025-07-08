@@ -7,28 +7,50 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const Dashboard = ({ onRefresh }) => {
   const [recentTarifas, setRecentTarifas] = useState([])
+  const [estatisticas, setEstatisticas] = useState({
+    totalTarifas: 0,
+    precoMedio: 0,
+    hoteisAtivos: 0,
+    canais: 0
+  })
   const [loading, setLoading] = useState(false)
 
   const fetchRecentData = async () => {
-    setLoading(true)
     try {
       const response = await fetch(`${API_BASE_URL}/api/tarifas?per_page=10`)
       if (response.ok) {
         const data = await response.json()
-        if (data.success) {
-          setRecentTarifas(data.data || [])
-        }
+        setRecentTarifas(data.tarifas || [])
       }
     } catch (error) {
       console.error('Erro ao buscar tarifas recentes:', error)
       setRecentTarifas([])
+    }
+  }
+
+  const fetchEstatisticas = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/estatisticas`)
+      if (response.ok) {
+        const data = await response.json()
+        setEstatisticas(data)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas:', error)
+    }
+  }
+
+  const fetchAllData = async () => {
+    setLoading(true)
+    try {
+      await Promise.all([fetchRecentData(), fetchEstatisticas()])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchRecentData()
+    fetchAllData()
   }, [])
 
   const formatDate = (dateString) => {
@@ -68,11 +90,7 @@ const Dashboard = ({ onRefresh }) => {
               <div>
                 <p className="text-sm font-medium text-blue-600">Tarifas Hoje</p>
                 <p className="text-2xl font-bold text-blue-700">
-                  {recentTarifas.filter(t => {
-                    const today = new Date().toDateString()
-                    const tarifaDate = new Date(t.created_at || t.data_checkin).toDateString()
-                    return today === tarifaDate
-                  }).length}
+                  {estatisticas.totalTarifas}
                 </p>
               </div>
               <Calendar className="w-8 h-8 text-blue-500" />
@@ -86,10 +104,7 @@ const Dashboard = ({ onRefresh }) => {
               <div>
                 <p className="text-sm font-medium text-green-600">Preço Médio</p>
                 <p className="text-2xl font-bold text-green-700">
-                  {recentTarifas.length > 0 
-                    ? formatPrice(recentTarifas.reduce((acc, t) => acc + (parseFloat(t.preco) || 0), 0) / recentTarifas.length)
-                    : 'R$ 0,00'
-                  }
+                  {formatPrice(estatisticas.precoMedio)}
                 </p>
               </div>
               <DollarSign className="w-8 h-8 text-green-500" />
@@ -103,7 +118,7 @@ const Dashboard = ({ onRefresh }) => {
               <div>
                 <p className="text-sm font-medium text-purple-600">Hotéis Ativos</p>
                 <p className="text-2xl font-bold text-purple-700">
-                  {new Set(recentTarifas.map(t => t.hotel_id)).size}
+                  {estatisticas.hoteisAtivos}
                 </p>
               </div>
               <Building className="w-8 h-8 text-purple-500" />
@@ -117,7 +132,7 @@ const Dashboard = ({ onRefresh }) => {
               <div>
                 <p className="text-sm font-medium text-orange-600">Canais</p>
                 <p className="text-2xl font-bold text-orange-700">
-                  {new Set(recentTarifas.map(t => t.canal).filter(Boolean)).size}
+                  {estatisticas.canais}
                 </p>
               </div>
               <MapPin className="w-8 h-8 text-orange-500" />
