@@ -283,7 +283,7 @@ const ComparativeDashboard = () => {
           </Card>
 
           {/* Tabela de Preços */}
-          {analysisData.tabela_precos && analysisData.tabela_precos.hoteis && analysisData.tabela_precos.hoteis.length > 0 && (
+          {analysisData.grafico_evolucao && analysisData.grafico_evolucao.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -300,47 +300,46 @@ const ComparativeDashboard = () => {
                     <thead>
                       <tr>
                         <th className="border border-gray-200 bg-gray-50 p-2 text-left">Hotel</th>
-                        {analysisData.tabela_precos.datas.map((data, index) => (
+                        {analysisData.grafico_evolucao.map((item, index) => (
                           <th key={index} className="border border-gray-200 bg-gray-50 p-2 text-center min-w-[100px]">
-                            {formatDate(data)}
+                            {item.data}
                           </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {analysisData.tabela_precos.hoteis.map((hotel, index) => {
-                        // O primeiro hotel é sempre o hotel principal (foco)
-                        const isMainHotel = index === 0;
-                        
-                        return (
-                          <tr key={hotel.id} className={isMainHotel ? "bg-blue-50" : ""}>
-                            <td className={`border border-gray-200 p-2 font-medium ${isMainHotel ? "text-blue-700" : ""}`}>
-                              {hotel.nome}
-                              {isMainHotel && <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Seu Hotel</span>}
-                            </td>
-                            {hotel.precos.map((preco, idx) => {
-                              // Se for o hotel principal, apenas exibe o preço normalmente
-                              if (isMainHotel) {
-                                return (
-                                  <td key={idx} className="border border-gray-200 p-2 text-center text-blue-700">
-                                    {formatPrice(preco)}
-                                  </td>
-                                );
-                              }
-                              
-                              // Para concorrentes, aplicar a lógica de cores
-                              const mainHotelPrice = analysisData.tabela_precos.hoteis[0].precos[idx];
-                              const colorClass = getPriceColorClass(mainHotelPrice, preco);
-                              
-                              return (
-                                <td key={idx} className={`border border-gray-200 p-2 text-center ${colorClass}`}>
-                                  {formatPrice(preco)}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
+                      {/* Hotel Principal */}
+                      <tr className="bg-blue-50">
+                        <td className="border border-gray-200 p-2 font-medium text-blue-700">
+                          {analysisData.hotel_principal?.nome}
+                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Seu Hotel</span>
+                        </td>
+                        {analysisData.grafico_evolucao.map((item, idx) => (
+                          <td key={idx} className="border border-gray-200 p-2 text-center text-blue-700">
+                            {formatPrice(item[analysisData.hotel_principal?.nome] || 0)}
+                          </td>
+                        ))}
+                      </tr>
+                      
+                      {/* Concorrentes */}
+                      {analysisData.concorrentes?.map((concorrente) => (
+                        <tr key={concorrente.id}>
+                          <td className="border border-gray-200 p-2 font-medium">
+                            {concorrente.nome}
+                          </td>
+                          {analysisData.grafico_evolucao.map((item, idx) => {
+                            const mainHotelPrice = item[analysisData.hotel_principal?.nome] || 0;
+                            const concorrentePrice = item[concorrente.nome] || 0;
+                            const colorClass = getPriceColorClass(mainHotelPrice, concorrentePrice);
+                            
+                            return (
+                              <td key={idx} className={`border border-gray-200 p-2 text-center ${colorClass}`}>
+                                {formatPrice(concorrentePrice)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -365,7 +364,7 @@ const ComparativeDashboard = () => {
           )}
 
           {/* Gráfico de Linhas */}
-          {analysisData.dados_grafico && analysisData.dados_grafico.series && analysisData.dados_grafico.series.length > 0 && (
+          {analysisData.grafico_evolucao && analysisData.grafico_evolucao.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -380,7 +379,7 @@ const ComparativeDashboard = () => {
                 <div className="h-[400px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <RechartsLineChart
-                      data={prepareChartData()}
+                      data={analysisData.grafico_evolucao}
                       margin={{ top: 20, right: 30, left: 20, bottom: 50 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
@@ -400,13 +399,23 @@ const ComparativeDashboard = () => {
                         labelFormatter={(label) => `Data: ${label}`}
                       />
                       <Legend />
-                      {analysisData.dados_grafico.series.map((serie, index) => (
+                      {/* Hotel Principal */}
+                      <Line
+                        type="monotone"
+                        dataKey={analysisData.hotel_principal?.nome}
+                        stroke="#2563eb"
+                        strokeWidth={3}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                      {/* Concorrentes */}
+                      {analysisData.concorrentes?.map((concorrente, index) => (
                         <Line
-                          key={serie.id}
+                          key={concorrente.id}
                           type="monotone"
-                          dataKey={serie.nome}
-                          stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                          strokeWidth={index === 0 ? 3 : 2}
+                          dataKey={concorrente.nome}
+                          stroke={CHART_COLORS[(index + 1) % CHART_COLORS.length]}
+                          strokeWidth={2}
                           dot={{ r: 4 }}
                           activeDot={{ r: 6 }}
                         />
