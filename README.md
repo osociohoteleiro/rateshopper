@@ -11,6 +11,42 @@ O Rate Shopper é uma ferramenta que permite aos hoteleiros:
 - Visualizar análises comparativas com gráficos e tabelas coloridas
 - Acompanhar estatísticas de mercado
 
+## 🌿 Branches Disponíveis
+
+Este repositório contém diferentes versões do sistema para facilitar a navegação entre estados funcionais:
+
+### 📌 `main` (Branch Principal)
+- **Versão**: Node.js/React (Estado atual)
+- **Status**: Em desenvolvimento/correção
+- **Descrição**: Versão mais recente com todas as funcionalidades implementadas
+
+### ✅ `backup-funcionando-pre-login` (RECOMENDADA)
+- **Versão**: Node.js/React (Estado funcional)
+- **Status**: ✅ **FUNCIONANDO**
+- **Descrição**: Estado funcional antes da implementação do sistema de login
+- **Funcionalidades confirmadas**:
+  - Dashboard com estatísticas ✅
+  - Cadastro de hotéis ✅
+  - Upload de tarifas ✅
+  - Tabela comparativa com cores ✅
+  - Gestão de concorrentes ✅
+  - Logo O Sócio Hoteleiro ✅
+
+### 📚 `flask-original` (Referência)
+- **Versão**: Flask/Python (Sistema original)
+- **Status**: Referência histórica
+- **Descrição**: Sistema original em Flask que funcionava antes da migração para Node.js
+
+## 🚀 Como Usar uma Branch Específica
+
+Para usar a versão funcional recomendada:
+
+```bash
+git clone https://github.com/osociohoteleiro/rateshopper.git
+cd rateshopper
+git checkout backup-funcionando-pre-login
+```
+
 ## 🛠️ Tecnologias
 
 ### Backend
@@ -47,25 +83,34 @@ rate_shopper_nodejs/
 
 ## 🚀 Como Executar
 
-### Backend
+### Versão Recomendada (backup-funcionando-pre-login)
+
+1. **Clone e mude para a branch funcional**:
+```bash
+git clone https://github.com/osociohoteleiro/rateshopper.git
+cd rateshopper
+git checkout backup-funcionando-pre-login
+```
+
+2. **Backend**:
 ```bash
 cd backend
 npm install
 node server.js
 ```
 
-### Frontend
+3. **Frontend** (em outro terminal):
 ```bash
 cd frontend
 npm install
 npm run build
 ```
 
-O servidor backend serve automaticamente os arquivos do frontend buildado.
+O servidor backend serve automaticamente os arquivos do frontend buildado na porta 3000.
 
 ## 📊 Funcionalidades
 
-### ✅ Implementadas
+### ✅ Implementadas (Branch: backup-funcionando-pre-login)
 - Dashboard com estatísticas
 - Cadastro e gestão de hotéis
 - Upload de planilhas de tarifas
@@ -76,18 +121,19 @@ O servidor backend serve automaticamente os arquivos do frontend buildado.
   - 🔴 Vermelho: Concorrente mais de 10% mais barato
 - Gráfico de evolução de preços
 
-### 🔄 Em Desenvolvimento
+### 🔄 Em Desenvolvimento (Branch: main)
 - Sistema de autenticação de usuários
 - Relatórios exportáveis
 - Notificações de mudanças de preços
 - API para integração externa
 
-## 📝 Histórico de Versões
+## 🎯 Estratégia de Branches
 
-Este repositório contém diferentes commits representando os estados de desenvolvimento:
-- Cada commit representa um ponto específico do desenvolvimento
-- Permite voltar a versões anteriores funcionais
-- Facilita identificação de problemas introduzidos
+Este repositório utiliza uma estratégia de múltiplas branches para:
+- **Preservar estados funcionais** do sistema
+- **Facilitar rollback** para versões estáveis
+- **Permitir desenvolvimento incremental** sem quebrar funcionalidades
+- **Manter histórico** de diferentes implementações
 
 ## 🎨 Layout
 
@@ -96,6 +142,26 @@ O sistema utiliza o logotipo "O Sócio Hoteleiro" e mantém uma interface limpa 
 - Cards informativos no dashboard
 - Tabelas responsivas
 - Gráficos interativos
+
+## 🔧 Solução de Problemas
+
+Se encontrar problemas:
+
+1. **Primeiro, tente a branch funcional**:
+   ```bash
+   git checkout backup-funcionando-pre-login
+   ```
+
+2. **Verifique se as dependências estão instaladas**:
+   ```bash
+   cd backend && npm install
+   cd ../frontend && npm install
+   ```
+
+3. **Reconstrua o frontend**:
+   ```bash
+   cd frontend && npm run build
+   ```
 
 ## 📞 Suporte
 
