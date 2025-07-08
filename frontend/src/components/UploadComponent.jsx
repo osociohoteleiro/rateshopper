@@ -116,7 +116,9 @@ const UploadComponent = ({ onRefresh }) => {
           message: 'Upload realizado com sucesso!',
           ...data.data
         })
-        onRefresh()
+        if (onRefresh && typeof onRefresh === 'function') {
+          onRefresh()
+        }
       } else {
         setUploadResult({
           success: false,
