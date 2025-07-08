@@ -226,33 +226,75 @@ app.post('/api/upload', upload.single('arquivo'), (req, res) => {
       arquivo_salvo: req.file.filename
     };
 
-    // Simular processamento do arquivo
-    const novasTarifas = [
-      { 
-        id: tarifas.length + 1, 
-        hotel_id: parseInt(hotelId), 
-        planilha_id: planilhaId,
-        data: '2025-07-08', 
-        preco: 250.00, 
-        tipo_quarto: 'Standard' 
-      },
-      { 
-        id: tarifas.length + 2, 
-        hotel_id: parseInt(hotelId), 
-        planilha_id: planilhaId,
-        data: '2025-07-09', 
-        preco: 275.00, 
-        tipo_quarto: 'Standard' 
-      },
-      { 
-        id: tarifas.length + 3, 
-        hotel_id: parseInt(hotelId), 
-        planilha_id: planilhaId,
-        data: '2025-07-10', 
-        preco: 300.00, 
-        tipo_quarto: 'Standard' 
+    // Processar o arquivo Excel real
+    const XLSX = require('xlsx');
+    const workbook = XLSX.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    const novasTarifas = [];
+    let tarifaId = tarifas.length + 1;
+
+    // Processar cada linha da planilha (assumindo que a primeira linha pode ser cabeçalho)
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      
+      // Pular linhas vazias
+      if (!row || row.length < 3) continue;
+      
+      try {
+        // Assumindo formato: [data_inicio, data_fim, preco]
+        const dataInicio = row[0];
+        const dataFim = row[1];
+        const preco = parseFloat(String(row[2]).replace(',', '.'));
+        
+        // Validar se os dados são válidos
+        if (!dataInicio || !preco || isNaN(preco)) continue;
+        
+        // Converter data para formato ISO se necessário
+        let dataFormatada;
+        if (dataInicio instanceof Date) {
+          dataFormatada = dataInicio.toISOString().split('T')[0];
+        } else if (typeof dataInicio === 'string') {
+          // Tentar converter string de data
+          const partesData = dataInicio.split('/');
+          if (partesData.length === 3) {
+            // Formato DD/MM/YYYY
+            const dia = partesData[0].padStart(2, '0');
+            const mes = partesData[1].padStart(2, '0');
+            const ano = partesData[2];
+            dataFormatada = `${ano}-${mes}-${dia}`;
+          } else {
+            // Tentar parsing direto
+            const dataObj = new Date(dataInicio);
+            if (!isNaN(dataObj.getTime())) {
+              dataFormatada = dataObj.toISOString().split('T')[0];
+            } else {
+              continue; // Pular linha com data inválida
+            }
+          }
+        } else {
+          continue; // Pular linha com data inválida
+        }
+        
+        // Criar tarifa
+        const novaTarifa = {
+          id: tarifaId++,
+          hotel_id: parseInt(hotelId),
+          planilha_id: planilhaId,
+          data: dataFormatada,
+          preco: preco,
+          tipo_quarto: 'Standard'
+        };
+        
+        novasTarifas.push(novaTarifa);
+        
+      } catch (error) {
+        console.warn(`Erro ao processar linha ${i + 1}:`, error.message);
+        continue; // Pular linha com erro
       }
-    ];
+    }
 
     // Adicionar informações da quantidade de tarifas à planilha
     planilhaInfo.quantidade_tarifas = novasTarifas.length;
