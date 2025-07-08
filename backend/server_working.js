@@ -76,6 +76,14 @@ app.get('/api/hotels', (req, res) => {
   });
 });
 
+// Rota alternativa para compatibilidade
+app.get('/api/hoteis', (req, res) => {
+  res.json({
+    success: true,
+    data: hoteis
+  });
+});
+
 app.post('/api/hotels', (req, res) => {
   const { nome, url_booking, localizacao } = req.body;
   const novoHotel = {
@@ -362,48 +370,120 @@ app.get('/api/analise/comparativo', (req, res) => {
     });
   }
 
-  // Simular dados de análise comparativa
+  // Filtrar tarifas do hotel principal no período
+  const tarifasHotelPrincipal = tarifas.filter(t => 
+    t.hotel_id === parseInt(hotel_id) &&
+    new Date(t.data) >= new Date(data_inicio) &&
+    new Date(t.data) <= new Date(data_fim)
+  );
+
+  // Calcular preço médio do hotel principal
+  const precoMedioHotelPrincipal = tarifasHotelPrincipal.length > 0 
+    ? tarifasHotelPrincipal.reduce((sum, t) => sum + t.preco, 0) / tarifasHotelPrincipal.length
+    : 0;
+
+  // Buscar dados dos concorrentes
+  const concorrentesData = hotel.concorrentes.map((concorrenteNome) => {
+    const concorrenteHotel = hoteis.find(h => h.nome === concorrenteNome);
+    const concorrenteId = concorrenteHotel ? concorrenteHotel.id : null;
+    
+    // Filtrar tarifas do concorrente no período
+    const tarifasConcorrente = concorrenteId 
+      ? tarifas.filter(t => 
+          t.hotel_id === concorrenteId &&
+          new Date(t.data) >= new Date(data_inicio) &&
+          new Date(t.data) <= new Date(data_fim)
+        )
+      : [];
+
+    // Só calcular preço médio se houver tarifas reais
+    const precoMedioConcorrente = tarifasConcorrente.length > 0
+      ? tarifasConcorrente.reduce((sum, t) => sum + t.preco, 0) / tarifasConcorrente.length
+      : null; // Null se não houver tarifas reais
+
+    // Só incluir concorrente se houver tarifas reais
+    if (precoMedioConcorrente === null) {
+      return null;
+    }
+
+    return {
+      id: concorrenteId,
+      nome: concorrenteNome,
+      preco_medio: precoMedioConcorrente,
+      total_tarifas: tarifasConcorrente.length,
+      diferenca_percentual: precoMedioHotelPrincipal > 0 
+        ? ((precoMedioConcorrente - precoMedioHotelPrincipal) / precoMedioHotelPrincipal * 100)
+        : 0
+    };
+  }).filter(concorrente => concorrente !== null); // Remover concorrentes sem tarifas
+
+  // Gerar dados do gráfico baseados APENAS nas tarifas reais cadastradas
+  const datasUnicas = [...new Set(tarifasHotelPrincipal.map(t => t.data))].sort();
+  const graficoEvolucao = [];
+  
+  // Só incluir datas onde há tarifas reais do hotel principal
+  datasUnicas.forEach(data => {
+    const dataFormatada = new Date(data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    
+    // Preço do hotel principal nesta data (só se existir tarifa real)
+    const tarifaHotelData = tarifasHotelPrincipal.find(t => t.data === data);
+    if (!tarifaHotelData) return; // Pular se não há tarifa real
+    
+    // Preços dos concorrentes nesta data (só incluir se houver tarifa real)
+    const precosConcorrentes = {};
+    let temConcorrenteComTarifa = false;
+    
+    concorrentesData.forEach(concorrente => {
+      const tarifaConcorrenteData = tarifas.find(t => 
+        t.hotel_id === concorrente.id && t.data === data
+      );
+      
+      if (tarifaConcorrenteData) {
+        precosConcorrentes[concorrente.nome] = tarifaConcorrenteData.preco;
+        temConcorrenteComTarifa = true;
+      }
+    });
+    
+    // Só adicionar ao gráfico se há pelo menos uma tarifa de concorrente na mesma data
+    if (temConcorrenteComTarifa) {
+      graficoEvolucao.push({
+        data: dataFormatada,
+        [hotel.nome]: tarifaHotelData.preco,
+        ...precosConcorrentes
+      });
+    }
+  });
+
   const dadosComparativos = {
     hotel_principal: {
       id: hotel.id,
       nome: hotel.nome,
-      preco_medio: 228.29,
-      total_tarifas: 30
+      preco_medio: precoMedioHotelPrincipal,
+      total_tarifas: tarifasHotelPrincipal.length
     },
-    concorrentes: hotel.concorrentes.map((concorrenteNome, index) => {
-      const concorrente = hoteis.find(h => h.nome === concorrenteNome);
-      return {
-        id: concorrente ? concorrente.id : index + 100,
-        nome: concorrenteNome,
-        preco_medio: 350.00 + (index * 50),
-        total_tarifas: 25 + (index * 5),
-        diferenca_percentual: ((350.00 + (index * 50)) - 228.29) / 228.29 * 100
-      };
-    }),
+    concorrentes: concorrentesData,
     periodo: {
       inicio: data_inicio,
       fim: data_fim
     },
     resumo: {
-      total_hoteis_analisados: 1 + hotel.concorrentes.length,
-      preco_medio_mercado: 315.50,
+      total_hoteis_analisados: 1 + concorrentesData.length,
+      preco_medio_mercado: concorrentesData.length > 0 
+        ? (precoMedioHotelPrincipal + concorrentesData.reduce((sum, c) => sum + c.preco_medio, 0)) / (concorrentesData.length + 1)
+        : precoMedioHotelPrincipal,
       posicao_ranking: 1,
-      economia_media: 87.21
+      economia_media: concorrentesData.length > 0
+        ? concorrentesData.reduce((sum, c) => sum + Math.max(0, c.preco_medio - precoMedioHotelPrincipal), 0) / concorrentesData.length
+        : 0
     },
-    grafico_evolucao: [
-      { data: '01/07', [hotel.nome]: 220, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 340 + (i * 30) }), {}) },
-      { data: '08/07', [hotel.nome]: 225, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 345 + (i * 30) }), {}) },
-      { data: '15/07', [hotel.nome]: 230, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 350 + (i * 30) }), {}) },
-      { data: '22/07', [hotel.nome]: 235, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 355 + (i * 30) }), {}) },
-      { data: '29/07', [hotel.nome]: 240, ...hotel.concorrentes.reduce((acc, nome, i) => ({ ...acc, [nome]: 360 + (i * 30) }), {}) }
-    ],
+    grafico_evolucao: graficoEvolucao,
     insights: [
-      `Foram analisadas ${30} tarifas do ${hotel.nome} no período selecionado`,
-      `Preço médio do ${hotel.nome}: R$ 228,29`,
-      ...hotel.concorrentes.map((nome, i) => 
-        `${nome} está ${(((350 + i * 50) - 228.29) / 228.29 * 100).toFixed(2)}% mais caro que ${hotel.nome}`
+      `Foram analisadas ${tarifasHotelPrincipal.length} tarifas do ${hotel.nome} no período selecionado`,
+      `Preço médio do ${hotel.nome}: R$ ${precoMedioHotelPrincipal.toFixed(2)}`,
+      ...concorrentesData.map(concorrente => 
+        `${concorrente.nome} está ${concorrente.diferenca_percentual.toFixed(2)}% ${concorrente.diferenca_percentual >= 0 ? 'mais caro' : 'mais barato'} que ${hotel.nome}`
       ),
-      `${hotel.nome} está mais barato que ${hotel.concorrentes.length > 0 ? '100%' : '0%'} dos concorrentes analisados`
+      `${hotel.nome} está ${concorrentesData.filter(c => c.preco_medio > precoMedioHotelPrincipal).length > 0 ? 'mais barato que ' + Math.round((concorrentesData.filter(c => c.preco_medio > precoMedioHotelPrincipal).length / concorrentesData.length) * 100) + '%' : 'com preços similares aos'} dos concorrentes analisados`
     ]
   };
 
