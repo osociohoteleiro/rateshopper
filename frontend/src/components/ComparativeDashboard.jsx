@@ -261,21 +261,21 @@ const ComparativeDashboard = () => {
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-green-600 font-medium">Preço Médio</p>
                   <p className="text-lg font-bold text-green-700">
-                    {formatPrice(analysisData.preco_medio_hotel)}
+                    {formatPrice(analysisData.hotel_principal?.preco_medio || 0)}
                   </p>
                 </div>
                 
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <p className="text-sm text-purple-600 font-medium">Concorrentes</p>
                   <p className="text-lg font-bold text-purple-700">
-                    {analysisData.total_concorrentes || 0}
+                    {analysisData.concorrentes?.length || 0}
                   </p>
                 </div>
                 
                 <div className="text-center p-4 bg-orange-50 rounded-lg">
                   <p className="text-sm text-orange-600 font-medium">Tarifas Analisadas</p>
                   <p className="text-lg font-bold text-orange-700">
-                    {analysisData.total_tarifas || 0}
+                    {analysisData.hotel_principal?.total_tarifas || 0}
                   </p>
                 </div>
               </div>
