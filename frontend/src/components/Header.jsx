@@ -18,9 +18,9 @@ const Header = ({ usuario, onLogout }) => {
 
   const links = [
     { path: '/', icon: <BarChart3 className="w-5 h-5" />, text: 'Dashboard' },
-    { path: '/hoteis', icon: <Hotel className="w-5 h-5" />, text: 'Hotéis' },
+    { path: '/hotels', icon: <Hotel className="w-5 h-5" />, text: 'Hotéis' },
     { path: '/upload', icon: <Upload className="w-5 h-5" />, text: 'Upload' },
-    { path: '/comparativo', icon: <PieChart className="w-5 h-5" />, text: 'Comparativo' },
+    { path: '/comparative', icon: <PieChart className="w-5 h-5" />, text: 'Comparativo' },
   ];
 
   // Adicionar link de administração para usuários master
