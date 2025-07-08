@@ -77,7 +77,7 @@ const UploadComponent = ({ onRefresh }) => {
     try {
       const formData = new FormData()
       formData.append('arquivo', selectedFile)
-      formData.append('hotel_id', selectedHotel)
+      formData.append('hotelId', selectedHotel)
 
       // Simular progresso
       const progressInterval = setInterval(() => {
@@ -90,11 +90,11 @@ const UploadComponent = ({ onRefresh }) => {
         })
       }, 200)
 
-      console.log('Enviando para:', `${API_BASE_URL}/api/upload/planilha`)
+      console.log('Enviando para:', `${API_BASE_URL}/api/upload`)
       console.log('Hotel ID:', selectedHotel)
       console.log('Arquivo:', selectedFile.name)
 
-      const response = await fetch(`${API_BASE_URL}/api/upload/planilha`, {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
         body: formData,
         // Não definir Content-Type, deixar o navegador configurar com o boundary correto para multipart/form-data
