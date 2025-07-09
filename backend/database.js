@@ -3,27 +3,27 @@ const mysql = require('mysql2/promise');
 // Configuração do banco de dados com fallbacks
 const dbConfigs = [
   {
-    name: 'Produção OSH-IA',
-    host: 'osh-ia_mariadb-ia',
+    name: 'Produção OSH',
+    host: 'osh-apps_mariaddb-rateshopper',
     port: 3306,
-    user: 'mariadb',
-    password: 'OSH4040()Xx!..n',
-    database: 'osh-ia'
-  },
-  {
-    name: 'Host Externo',
-    host: '147.93.36.138',
-    port: 3306,
-    user: 'mariadb',
-    password: 'OSH4040()Xx!..n',
+    user: 'rateshopper',
+    password: 'OSH4040()Xx!..nn',
     database: 'osh-ia'
   },
   {
     name: 'Localhost',
     host: 'localhost',
     port: 3306,
-    user: 'mariadb',
-    password: 'OSH4040()Xx!..n',
+    user: 'rateshopper',
+    password: 'OSH4040()Xx!..nn',
+    database: 'osh-ia'
+  },
+  {
+    name: '127.0.0.1',
+    host: '127.0.0.1',
+    port: 3306,
+    user: 'rateshopper',
+    password: 'OSH4040()Xx!..nn',
     database: 'osh-ia'
   }
 ];

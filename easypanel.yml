@@ -27,10 +27,10 @@ app:
   env:
     NODE_ENV: production
     PORT: 3001
-    DB_HOST: osh-ia_mariadb-ia
+    DB_HOST: osh-apps_mariaddb-rateshopper
     DB_PORT: 3306
-    DB_USER: mariadb
-    DB_PASSWORD: OSH4040()Xx!..n
+    DB_USER: rateshopper
+    DB_PASSWORD: OSH4040()Xx!..nn
     DB_NAME: osh-ia
   
   # Recursos
