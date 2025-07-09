@@ -8,7 +8,7 @@ const dbConfigs = [
     port: 3306,
     user: 'rateshopper',
     password: 'OSH4040()Xx!..nn',
-    database: 'osh-ia'
+    database: 'rateshopper'
   },
   {
     name: 'Localhost',
@@ -16,7 +16,7 @@ const dbConfigs = [
     port: 3306,
     user: 'rateshopper',
     password: 'OSH4040()Xx!..nn',
-    database: 'osh-ia'
+    database: 'rateshopper'
   },
   {
     name: '127.0.0.1',
@@ -24,7 +24,7 @@ const dbConfigs = [
     port: 3306,
     user: 'rateshopper',
     password: 'OSH4040()Xx!..nn',
-    database: 'osh-ia'
+    database: 'rateshopper'
   }
 ];
 

@@ -31,7 +31,7 @@ app:
     DB_PORT: 3306
     DB_USER: rateshopper
     DB_PASSWORD: OSH4040()Xx!..nn
-    DB_NAME: osh-ia
+    DB_NAME: rateshopper
   
   # Recursos
   resources:
