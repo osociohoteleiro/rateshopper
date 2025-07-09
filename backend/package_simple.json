@@ -1,0 +1,17 @@
+{
+  "name": "rate-shopper-emergency",
+  "version": "1.0.0",
+  "description": "Servidor de emergência para Rate Shopper",
+  "main": "server_emergency.js",
+  "scripts": {
+    "start": "node server_emergency.js",
+    "emergency": "node server_emergency.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
