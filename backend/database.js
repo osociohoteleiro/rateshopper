@@ -1,38 +1,64 @@
 const mysql = require('mysql2/promise');
 
-// Configuração do banco de dados com fallbacks
-const dbConfigs = [
-  {
-    name: 'Produção OSH-IA',
-    host: 'osh-ia_mariadb-ia',
-    port: 3306,
-    user: 'mariadb',
-    password: 'OSH4040()Xx!..n',
-    database: 'rateshopper'
-  },
-  {
-    name: 'Host Externo',
-    host: '147.93.36.138',
-    port: 3306,
-    user: 'mariadb',
-    password: 'OSH4040()Xx!..n',
-    database: 'rateshopper'
-  },
-  {
-    name: 'Localhost',
-    host: 'localhost',
-    port: 3306,
-    user: 'mariadb',
-    password: 'OSH4040()Xx!..n',
-    database: 'rateshopper'
+// Função para obter configuração do banco usando variáveis de ambiente primeiro
+function getDatabaseConfigs() {
+  const configs = [];
+  
+  // PRIMEIRA PRIORIDADE: Variáveis de ambiente
+  if (process.env.DB_HOST) {
+    configs.push({
+      name: 'Variáveis de Ambiente',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT) || 3306,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME
+    });
+    console.log('🔧 Usando configuração das variáveis de ambiente:');
+    console.log(`   Host: ${process.env.DB_HOST}`);
+    console.log(`   Port: ${process.env.DB_PORT || 3306}`);
+    console.log(`   User: ${process.env.DB_USER}`);
+    console.log(`   Database: ${process.env.DB_NAME}`);
   }
-];
+  
+  // FALLBACKS: Configurações hardcoded (apenas se variáveis não existirem)
+  configs.push(
+    {
+      name: 'Produção OSH-IA',
+      host: 'osh-ia_mariadb-ia',
+      port: 3306,
+      user: 'mariadb',
+      password: 'OSH4040()Xx!..n',
+      database: 'rateshopper'
+    },
+    {
+      name: 'Host Externo',
+      host: '147.93.36.138',
+      port: 3306,
+      user: 'mariadb',
+      password: 'OSH4040()Xx!..n',
+      database: 'rateshopper'
+    },
+    {
+      name: 'Localhost',
+      host: 'localhost',
+      port: 3306,
+      user: 'mariadb',
+      password: 'OSH4040()Xx!..n',
+      database: 'rateshopper'
+    }
+  );
+  
+  return configs;
+}
 
 let pool = null;
 let currentConfig = null;
 
 // Função para tentar conectar com diferentes configurações
 async function createConnection() {
+  const dbConfigs = getDatabaseConfigs();
+  
   for (const config of dbConfigs) {
     try {
       console.log(`🔄 Tentando conectar com ${config.name}...`);

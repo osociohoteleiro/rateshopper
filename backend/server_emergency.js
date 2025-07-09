@@ -9,6 +9,14 @@ console.log('🚨 SERVIDOR DE EMERGÊNCIA INICIANDO...');
 console.log('📊 PORT:', PORT);
 console.log('📊 NODE_ENV:', process.env.NODE_ENV);
 
+// Mostrar variáveis de ambiente do banco
+console.log('🔧 VARIÁVEIS DE AMBIENTE DO BANCO:');
+console.log('   DB_HOST:', process.env.DB_HOST || 'NÃO DEFINIDA');
+console.log('   DB_PORT:', process.env.DB_PORT || 'NÃO DEFINIDA');
+console.log('   DB_USER:', process.env.DB_USER || 'NÃO DEFINIDA');
+console.log('   DB_PASSWORD:', process.env.DB_PASSWORD ? '***DEFINIDA***' : 'NÃO DEFINIDA');
+console.log('   DB_NAME:', process.env.DB_NAME || 'NÃO DEFINIDA');
+
 // Middleware mínimo
 app.use(express.json());
 
